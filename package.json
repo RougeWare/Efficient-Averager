@@ -1,0 +1,18 @@
+s={
+	"name": "Efficient Averager",
+	"version": "1.1.0",
+	"description": "Uses exactly two floating-point variables to average indefinitely many numbers with a constant amount of memory usage.",
+	"main": "lib/eff-avg.min.js",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/BlueHuskyStudios/Efficient-Averager"
+	},
+	"author": "Kyli Rouge <Kyli@BHStudios.org>",
+	"maintainers": [
+		{
+			"name": "Kyli Rouge",
+			"url": "https://github.com/Supuhstar"
+		}
+	],
+	"license": "MIT"
+}
