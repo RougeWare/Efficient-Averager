@@ -22,12 +22,20 @@ class Averager
 	 */
 	private $timesAveraged;
 
+	/**
+	 * Creates a new Averager. Of course, the current average and number of times averaged are both set to 0
+	 */
 	public function __construct()
 	{
 		$this->currentAverage = 0;
 		$this->timesAveraged = 0;
 	}
 
+	/**
+	 * Creates a new Averager. The current average is set to the given number and number of times averaged is set to 1
+	 * 
+	 * @param $startingNumber the number to start with.
+	 */
 	public function __construct($startingNumber)
 	{
 		$this->currentAverage = $startingNumber;
