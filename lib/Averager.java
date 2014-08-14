@@ -1,9 +1,9 @@
-/**
+﻿/**
  * Averages very many numbers while using only 128 bits of memory (one floating-point and one integer), to store the average
  * information. This also allows for a more accurate result than adding all and dividing by the number of inputs. The downside
  * is that you sacrifice speed, but rigorous testing of this speed loss has not yet been performed.
  * 
- * @license MIT to Blue Husky Programming, �2012
+ * @license MIT to Blue Husky Programming, ©2012
  * @author Kyli Rouge of Blue Husky Studios
  * @since 2012-04-06
  * @version 1.0.1
