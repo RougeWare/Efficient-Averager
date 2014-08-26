@@ -6,7 +6,8 @@
  * @license MIT to Blue Husky Programming, ©2012
  * @author Kyli Rouge of Blue Husky Studios
  * @since 2012-04-06
- * @version 1.0.1
+ * @version 1.1.0
+ * 		- 2014-08-25 (1.1.0) - Kyli Rouge renamed methods to be more uniform with other languages
  * 		- 2014-08-13 (1.0.1) - Kyli Rouge reformatted and documented the code for GitHub
  * 		- 2012-04-06 (1.0.0) - Kyli Rouge made base code
  */
@@ -51,7 +52,7 @@ public class Averager extends Number
 	 * @since 2012-04-06
 	 * @version 1.0.0
 	 */
-	public strictfp Averager addToAverage(double... d)
+	public strictfp Averager average(double... d)
 	{
 		for (double e : d)
 			addToAverage(e);
@@ -68,7 +69,7 @@ public class Averager extends Number
 	 * @since 2012-04-06
 	 * @version 1.0.0
 	 */
-	public strictfp Averager addToAverage(double d)
+	public strictfp Averager average(double d)
 	{
 		currentAverage = ((currentAverage * timesAveraged) + d) / ++timesAveraged;
 		return this;
@@ -84,7 +85,7 @@ public class Averager extends Number
 	 * @since 2012-04-06
 	 * @version 1.0.0
 	 */
-	public double getCurrentAverage()
+	public double current()
 	{
 		return currentAverage;
 	}
@@ -98,7 +99,7 @@ public class Averager extends Number
 	 * @since 2012-04-06
 	 * @version 1.0.0
 	 */
-	public long getTimesAveraged()
+	public long count()
 	{
 		return timesAveraged;
 	}
@@ -112,7 +113,7 @@ public class Averager extends Number
 	 * @since 2012-04-06
 	 * @version 1.0.0
 	 */
-	public Averager clearAverage()
+	public Averager clear()
 	{
 		currentAverage = 0;
 		timesAveraged = 0;
