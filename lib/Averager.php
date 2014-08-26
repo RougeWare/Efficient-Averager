@@ -7,7 +7,8 @@
  * @license MIT to Blue Husky Programming, ©2012
  * @author Kyli Rouge of Blue Husky Studios
  * @since 2012-04-06
- * @version 1.0.1
+ * @version 1.0.1 
+ * 		- 2014-08-25 (1.1.0) - Kyli Rouge renamed methods to be more uniform with other languages
  * 		- 2014-08-13 (1.0.1) - Kyli Rouge translated it to PHP
  * 		- 2012-04-06 (1.0.0) - Kyli Rouge made base code
  */
@@ -52,7 +53,7 @@ class Averager
 	 * @since 2012-04-06
 	 * @version 1.0.0
 	 */
-	public function addToAverage(...$d)
+	public function average(...$d)
 	{
 		for ($d as $e)
 			$this->addToAverage(e);
@@ -69,7 +70,7 @@ class Averager
 	 * @since 2012-04-06
 	 * @version 1.0.0
 	 */
-	public function addToAverage($d)
+	public function average($d)
 	{
 		$this->currentAverage = (($this->currentAverage * $this->timesAveraged) + $d) / ++$this->timesAveraged;
 		return $this;
@@ -85,7 +86,7 @@ class Averager
 	 * @since 2012-04-06
 	 * @version 1.0.0
 	 */
-	public function getCurrentAverage()
+	public function current()
 	{
 		return $this->currentAverage;
 	}
@@ -99,7 +100,7 @@ class Averager
 	 * @since 2012-04-06
 	 * @version 1.0.0
 	 */
-	public function getTimesAveraged()
+	public function count()
 	{
 		return $this->timesAveraged;
 	}
@@ -113,7 +114,7 @@ class Averager
 	 * @since 2012-04-06
 	 * @version 1.0.0
 	 */
-	public function clearAverage()
+	public function clear()
 	{
 		$this->currentAverage = 0;
 		$this->timesAveraged = 0;
