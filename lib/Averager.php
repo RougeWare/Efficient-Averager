@@ -56,7 +56,7 @@ class Averager
 	public function average(...$d)
 	{
 		for ($d as $e)
-			$this->addToAverage(e);
+			$this->average(e);
 		return $this;
 	}
 
