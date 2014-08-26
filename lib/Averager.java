@@ -55,7 +55,7 @@ public class Averager extends Number
 	public strictfp Averager average(double... d)
 	{
 		for (double e : d)
-			addToAverage(e);
+			average(e);
 		return this;
 	}
 
@@ -189,6 +189,6 @@ public class Averager extends Number
 	@Override
 	public double doubleValue()
 	{
-		return getCurrentAverage();
+		return current();
 	}
 }
