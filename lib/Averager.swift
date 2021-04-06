@@ -21,8 +21,9 @@ import Foundation
 /// @license BH-0-PD to Blue Husky Studios, ©2019
 /// @author Ben Leggiero
 /// @since 2019-03-31
-/// @version 1.0.0
+/// @version 1.1.0
 public struct Averager<Number: BinaryFloatingPoint> {
+    
     ///  Holds the current average value
     public private(set) var currentAverage: Number = 0
     
@@ -35,6 +36,7 @@ public struct Averager<Number: BinaryFloatingPoint> {
         timesAveraged = 0
     }
     
+    
     /// Creates a new `Averager`. The current average is set to the given number and number of times averaged is set to `1`
     ///
     /// - Parameter startingNumber: the number to start with
@@ -42,7 +44,13 @@ public struct Averager<Number: BinaryFloatingPoint> {
         currentAverage = startingNumber
         timesAveraged = 1
     }
-    
+}
+
+
+
+// MARK: - Functionality
+
+public extension Averager {
     
     /// Adds the given numbers to the average. Any number of arguments can be given.
     ///
@@ -123,6 +131,6 @@ public struct Averager<Number: BinaryFloatingPoint> {
 /// - Parameters:
 ///   - lhs: The averager to mutate
 ///   - rhs: The number to add to the average
-func << <Number>(lhs: inout Averager<Number>, rhs: Number) {
+public func << <Number>(lhs: inout Averager<Number>, rhs: Number) {
     lhs.average(rhs)
 }

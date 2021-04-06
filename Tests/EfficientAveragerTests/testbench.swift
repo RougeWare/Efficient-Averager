@@ -1,5 +1,5 @@
 import XCTest
-@testable import Efficient_Averager
+@testable import EfficientAverager
 
 final class Testbench: XCTestCase {
     
