@@ -117,10 +117,23 @@ public extension Averager {
     
     
     /// Resets this averager to a state before any number has been averaged
+    @discardableResult
     mutating func clear() -> Averager<Number> {
         currentAverage = 0.0
         timesAveraged = 0
         return self
+    }
+}
+
+
+
+public extension Averager {
+    
+    /// If any numbers have been averaged, this returns the current average. Else, if no numbers have yet been averaged, this returns `nil`
+    var currentAverageOrNil: Number? {
+        timesAveraged > 0
+            ? currentAverage
+            : nil
     }
 }
 
