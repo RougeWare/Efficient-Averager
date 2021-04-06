@@ -3,5 +3,5 @@ import XCTest
 import Efficient_AveragerTests
 
 XCTMain([
-    Efficient_AveragerTests.allTests
+    Testbench.allTests
 ].flatMap { $0 })
