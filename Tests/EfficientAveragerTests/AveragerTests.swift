@@ -2,15 +2,14 @@
 //  AveragerTests.swift
 //  EfficientAverager
 //
-//  Validates the arithmetic correctness, protocol-synthesised behaviour, and concrete-type invariants of
-//  `ProactiveAverager` and `SummingAverager`.
+//  Tests the contracts of `AveragerProtocol` and its concrete implementations.
 //
-//  Test organisation reflects the architectural layering of the library:
-//    1. `AveragerProtocol` synthesised defaults — correctness is a protocol concern.
-//    2. `ProactiveAverager`-specific invariants — running-average storage strategy.
-//    3. `SummingAverager`-specific invariants — deferred-division storage strategy.
-//    4. The `<<` infix operator.
-//    5. Cross-implementation consistency — both strategies must agree on the mean.
+//  Test organization:
+//    1. `ReferenceAverager`: a minimal conformer used to test synthesized protocol behavior
+//    2. `ProactiveAverager`: all contracts
+//    3. `SummingAverager`: all contracts
+//    4. The `<<` infix operator
+//    5. Cross-implementation consistency: all three types must agree on the mean
 //
 //  Created by Ky directing Claude 4.6 Sonnet.
 //  In the public domain via The Fair License
@@ -24,131 +23,234 @@ import EfficientAverager
 
 
 
-// MARK: - Tolerance
+// MARK: - Helpers
 
-/// The acceptable floating-point deviation for equality comparisons throughout
-/// this test suite. Sized to accommodate rounding across both averaging strategies
-/// without masking genuine arithmetic divergence.
-private let ε: Double = 1e-10
+private extension BinaryFloatingPoint {
+    
+    /// Returns `true` if this value is within `tolerance` of `expected`.
+    func isApproximately(_ expected: Self, within tolerance: Self = .ε) -> Bool {
+        abs(self - expected) < tolerance
+    }
+    
+    
+    /// How close two floating-point values need to be to count as equal in these tests.
+    @inline(__always)
+    static var ε: Self { 1e-10 }
+}
 
 
 
-// MARK: - AveragerProtocol Synthesised Behaviour
+// MARK: - Reference Implementation
 
-/// Validates the behaviour synthesised by `AveragerProtocol`'s default
-/// implementations — `currentAverageOrNil`, `clear()`, the variadic overload,
-/// and the array-from-forEach fallback.
+/// A minimal `AveragerProtocol` conformer used to test the protocol's synthesized behavior.
 ///
-/// Because these defaults live on the protocol, correctness is verified once
-/// against `SummingAverager` (which does not override them beyond `average(_:Number)`)
-/// rather than redundantly across every conformer.
-@Suite("AveragerProtocol — Synthesised Defaults")
+/// It stores every value it receives and recomputes the mean from the full list on each read, so `currentAverage` is always as accurate as possible. That makes it a reliable reference to check the production types against.
+///
+/// Only the minimal requirements (`currentAverage`, `timesAveraged`, `init()`, `init(startingNumber:)`, and `average(_ number:)`) are implemented here. `currentAverageOrNil`, `clear()`, the variadic overload, and the array overload are all left to `AveragerProtocol` to synthesize.
+private struct ReferenceAverager<Number: BinaryFloatingPoint>: AveragerProtocol {
+    
+    
+    private var values: [Number] = []
+    
+    
+    var timesAveraged: UInt { UInt(values.count) }
+    
+    
+    var currentAverage: Number {
+        guard !values.isEmpty else { return .nan }
+        return values.reduce(0, +) / Number(values.count)
+    }
+    
+    
+    init() {}
+    
+    
+    init(startingNumber: Number) {
+        values = [startingNumber]
+    }
+    
+    
+    @discardableResult
+    mutating func average(_ number: Number) -> Self {
+        values.append(number)
+        return self
+    }
+}
+
+
+
+// MARK: - AveragerProtocol Synthesis
+
+/// Tests for the behavior that `AveragerProtocol` synthesizes for any conformer. Uses `ReferenceAverager` because it only implements the bare minimum, so everything under test here is guaranteed to come from the protocol.
+@Suite("`AveragerProtocol` Synthesis (via `ReferenceAverager`)")
 struct AveragerProtocolSynthesisTests {
     
-    // MARK: currentAverageOrNil
     
-    /// `currentAverageOrNil` should return `nil` before any value is contributed,
-    /// providing a safe query path for callers who cannot distinguish a zero mean
-    /// from an uninitialised averager.
-    @Test("currentAverageOrNil is nil before any averaging")
-    func currentAverageOrNilWhenEmpty() {
-        let averager = SummingAverager<Double>()
-        #expect(averager.currentAverageOrNil == nil)
-    }
+    // MARK: init
     
-    /// Once at least one value has been contributed, `currentAverageOrNil` must
-    /// surface the current mean.
-    @Test("currentAverageOrNil returns the mean after averaging")
-    func currentAverageOrNilWhenPopulated() {
-        var averager = SummingAverager<Double>()
-        averager.average(42.0)
-        #expect(averager.currentAverageOrNil == 42.0)
-    }
-    
-    /// `clear()` reinitialises via `self = .init()`, so `timesAveraged` returns
-    /// to zero and `currentAverageOrNil` must revert to `nil`.
-    @Test("currentAverageOrNil reverts to nil after clear()")
-    func currentAverageOrNilAfterClear() {
-        var averager = SummingAverager<Double>()
-        averager.average(5.0)
-        averager.clear()
-        #expect(averager.currentAverageOrNil == nil)
-    }
-    
-    // MARK: clear()
-    
-    /// `clear()` delegates to `self = .init()`, so the post-condition must be
-    /// identical to a freshly constructed instance.
-    @Test("clear() produces a state equivalent to default init")
-    func clearMatchesDefaultInit() {
-        var averager = SummingAverager<Double>()
-        averager.average([10.0, 20.0, 30.0])
-        averager.clear()
-        
-        let fresh = SummingAverager<Double>()
-        #expect(averager == fresh)
+    @Test("`init()`: zero average, zero count")
+    func defaultInit() {
+        let averager = ReferenceAverager<Double>()
+        #expect(averager.currentAverage.isNaN)
         #expect(averager.timesAveraged == 0)
     }
     
-    /// Averaging after `clear()` must behave identically to a fresh instance —
-    /// no residual state from the previous session should survive.
-    @Test("Averager is fully functional after clear()")
-    func averagingAfterClear() {
-        var averager = SummingAverager<Double>()
-        averager.average([100.0, 200.0])
+    
+    @Test("`init(startingNumber:)`: seeds average and count correctly")
+    func startingNumberInit() {
+        let averager = ReferenceAverager<Double>(startingNumber: 42)
+        #expect(averager.currentAverage.isApproximately(42))
+        #expect(averager.timesAveraged == 1)
+    }
+    
+    
+    // MARK: currentAverageOrNil
+    
+    @Test("`currentAverageOrNil` is nil before any averaging")
+    func currentAverageOrNilWhenEmpty() {
+        let averager = ReferenceAverager<Double>()
+        #expect(averager.currentAverageOrNil == nil)
+    }
+    
+    
+    @Test("`currentAverageOrNil` returns the mean after averaging")
+    func currentAverageOrNilWhenPopulated() {
+        var averager = ReferenceAverager<Double>()
+        averager.average(42)
+        #expect(averager.currentAverageOrNil?.isApproximately(42) == true)
+    }
+    
+    
+    @Test("`currentAverageOrNil` reverts to nil after `clear()`")
+    func currentAverageOrNilAfterClear() {
+        var averager = ReferenceAverager<Double>()
+        averager.average(5)
         averager.clear()
-        averager.average([3.0, 9.0])
-        #expect(abs(averager.currentAverage - 6.0) < ε)
+        #expect(averager.currentAverageOrNil == nil)
+    }
+    
+    
+    // MARK: clear()
+    
+    @Test("`clear()` resets to a blank state")
+    func clearResetsState() {
+        var averager = ReferenceAverager<Double>()
+        averager.average([10, 20, 30])
+        averager.clear()
+        #expect(averager.currentAverage.isNaN)
+        #expect(averager.timesAveraged == 0)
+    }
+    
+    
+    @Test("Averaging works correctly after `clear()`")
+    func averagingAfterClear() {
+        var averager = ReferenceAverager<Double>()
+        averager.average([100, 200])
+        averager.clear()
+        averager.average([3, 9])
+        // (3 + 9) / 2 = 6
+        #expect(averager.currentAverage.isApproximately(6))
         #expect(averager.timesAveraged == 2)
     }
     
+    
     // MARK: Variadic overload
     
-    /// The variadic overload is synthesised to delegate to `average(_ numbers: [Number])`.
-    /// Its result must therefore match the array overload for identical input.
-    @Test("Variadic average delegates correctly to the array overload")
-    func variadicDelegatesToArray() {
-        var variadic = SummingAverager<Double>()
-        var array    = SummingAverager<Double>()
-        
-        variadic.average(1.0, 2.0, 3.0, 4.0, 5.0)
-        array.average([1.0, 2.0, 3.0, 4.0, 5.0])
-        
-        #expect(variadic == array)
+    @Test("Variadic `average` produces the correct result")
+    func variadicAveraging() {
+        var averager = ReferenceAverager<Double>()
+        averager.average(2, 4, 6)
+        // (2 + 4 + 6) / 3 = 4
+        #expect(averager.currentAverage.isApproximately(4))
+        #expect(averager.timesAveraged == 3)
     }
     
-    // MARK: Array overload — forEach fallback
     
-    /// When a conformer doesn't override `average(_ numbers: [Number])`, the
-    /// synthesis iterates via `forEach` and accumulates by calling the single-value
-    /// overload. The result must be arithmetically identical to element-wise submission.
-    ///
-    /// `SummingAverager` *does* override the array overload for efficiency, so
-    /// this test targets it via the variadic path, which always uses the synthesis.
-    @Test("Protocol-synthesised array path matches element-wise submission")
-    func synthesisedArrayPathMatchesElementWise() {
-        var synthesised  = SummingAverager<Double>()   // variadic → synthesis
-        var elementWise  = SummingAverager<Double>()
+    @Test("Variadic `average` matches element-wise averaging")
+    func variadicMatchesElementWise() {
+        var variadic  = ReferenceAverager<Double>()
+        var elementWise = ReferenceAverager<Double>()
         
-        synthesised.average(10.0, 20.0, 30.0)
-        for n in [10.0, 20.0, 30.0] { elementWise.average(n) }
+        variadic.average(1, 2, 3, 4, 5)
+        elementWise.average(1)
+        elementWise.average(2)
+        elementWise.average(3)
+        elementWise.average(4)
+        elementWise.average(5)
         
-        #expect(synthesised == elementWise)
+        #expect(variadic.currentAverage.isApproximately(elementWise.currentAverage))
+        #expect(variadic.timesAveraged == elementWise.timesAveraged)
     }
     
-    // MARK: Empty input
     
-    /// An empty variadic call maps to an empty array, which must be a strict no-op.
-    /// This exercises the `guard !numbers.isEmpty` in implementations and the
-    /// synthesised forEach (which simply doesn't iterate).
-    @Test("Empty array submission is a strict no-op")
+    // MARK: Array overload
+    
+    @Test("Array `average` produces the correct result")
+    func arrayAveraging() {
+        var averager = ReferenceAverager<Double>()
+        averager.average([1, 2, 3, 4, 5])
+        // (1 + 2 + 3 + 4 + 5) / 5 = 3
+        #expect(averager.currentAverage.isApproximately(3))
+        #expect(averager.timesAveraged == 5)
+    }
+    
+    
+    @Test("Array `average` matches element-wise averaging")
+    func arrayMatchesElementWise() {
+        var array     = ReferenceAverager<Double>()
+        var elementWise = ReferenceAverager<Double>()
+        
+        array.average([10, 20, 30])
+        elementWise.average(10)
+        elementWise.average(20)
+        elementWise.average(30)
+        
+        #expect(array.currentAverage.isApproximately(elementWise.currentAverage))
+        #expect(array.timesAveraged == elementWise.timesAveraged)
+    }
+    
+    
+    @Test("Empty array is a no-op")
     func emptyArrayIsNoOp() {
-        var averager = SummingAverager<Double>()
-        averager.average(7.0)
-        let snapshot = averager
+        var averager = ReferenceAverager<Double>()
+        averager.average(7)
+        let snapshotAverage  = averager.currentAverage
+        let snapshotCount    = averager.timesAveraged
         
         averager.average([Double]())
-        #expect(averager == snapshot)
+        
+        #expect(averager.currentAverage.isApproximately(snapshotAverage))
+        #expect(averager.timesAveraged == snapshotCount)
+    }
+    
+    
+    // MARK: Deprecated no-arg overload
+    
+    @Test("No-arg `average()` is a no-op")
+    func noArgAverageIsNoOp() {
+        var averager = ReferenceAverager<Double>()
+        averager.average(7)
+        let snapshotAverage  = averager.currentAverage
+        let snapshotCount    = averager.timesAveraged
+        
+        averager.average()
+        
+        #expect(averager.currentAverage.isApproximately(snapshotAverage))
+        #expect(averager.timesAveraged == snapshotCount)
+    }
+    
+    
+    // MARK: Chaining
+    
+    @Test("Chained calls produce the correct cumulative mean")
+    func chaining() {
+        var averager = ReferenceAverager<Double>()
+        averager.average(1, 2, 3)
+        averager.average([4, 5])
+        averager.average(6)
+        // (1 + 2 + 3 + 4 + 5 + 6) / 6 = 3.5
+        #expect(averager.currentAverage.isApproximately(3.5))
+        #expect(averager.timesAveraged == 6)
     }
 }
 
@@ -156,108 +258,180 @@ struct AveragerProtocolSynthesisTests {
 
 // MARK: - ProactiveAverager
 
-/// Validates invariants unique to `ProactiveAverager`: its initialisation
-/// contract and the correctness of the running-average formula it maintains
-/// across both the single-value and array code paths.
-///
-/// Protocol-synthesised behaviour (`currentAverageOrNil`, `clear()`, variadic)
-/// is covered in `AveragerProtocolSynthesisTests` and is not repeated here.
-@Suite("ProactiveAverager")
+@Suite("`ProactiveAverager`")
 struct ProactiveAveragerTests {
     
-    // MARK: Initialisation
     
-    /// A default-initialised `ProactiveAverager` must store a zero average and
-    /// a zero count — the neutral element for subsequent averaging operations.
-    @Test("Default init: zero average, zero count")
+    // MARK: init
+    
+    @Test("`init()`: zero average, zero count")
     func defaultInit() {
         let averager = ProactiveAverager<Double>()
         #expect(averager.currentAverage == 0)
         #expect(averager.timesAveraged  == 0)
     }
     
-    /// `init(startingNumber:)` seeds the stored average with the given value and
-    /// sets `timesAveraged` to 1, so the next value is weighted equally against it.
-    @Test("startingNumber init: seeds average and count correctly")
+    
+    @Test("`init(startingNumber:)`: seeds average and count correctly")
     func startingNumberInit() {
         let averager = ProactiveAverager<Double>(startingNumber: 42)
-        #expect(averager.currentAverage == 42)
-        #expect(averager.timesAveraged  == 1)
+        #expect(averager.currentAverage.isApproximately(42))
+        #expect(averager.timesAveraged == 1)
     }
     
-    // MARK: Running-average correctness
     
-    /// The running-average formula `((current × n) + new) / (n + 1)` must
-    /// produce the correct mean after a single contribution into a fresh averager.
+    // MARK: currentAverageOrNil
+    
+    @Test("`currentAverageOrNil` is nil before any averaging")
+    func currentAverageOrNilWhenEmpty() {
+        let averager = ProactiveAverager<Double>()
+        #expect(averager.currentAverageOrNil == nil)
+    }
+    
+    
+    @Test("`currentAverageOrNil` returns the mean after averaging")
+    func currentAverageOrNilWhenPopulated() {
+        var averager = ProactiveAverager<Double>()
+        averager.average(42)
+        #expect(averager.currentAverageOrNil?.isApproximately(42) == true)
+    }
+    
+    
+    @Test("`currentAverageOrNil` reverts to nil after `clear()`")
+    func currentAverageOrNilAfterClear() {
+        var averager = ProactiveAverager<Double>()
+        averager.average(5)
+        averager.clear()
+        #expect(averager.currentAverageOrNil == nil)
+    }
+    
+    
+    // MARK: clear()
+    
+    @Test("`clear()` resets to a blank state")
+    func clearResetsState() {
+        var averager = ProactiveAverager<Double>()
+        averager.average([10, 20, 30])
+        averager.clear()
+        #expect(averager.currentAverage == 0)
+        #expect(averager.timesAveraged  == 0)
+    }
+    
+    
+    @Test("Averaging works correctly after `clear()`")
+    func averagingAfterClear() {
+        var averager = ProactiveAverager<Double>()
+        averager.average([100, 200])
+        averager.clear()
+        averager.average([3, 9])
+        // (3 + 9) / 2 = 6
+        #expect(averager.currentAverage.isApproximately(6))
+        #expect(averager.timesAveraged == 2)
+    }
+    
+    
+    // MARK: Single-value averaging
+    
     @Test("Single value into empty averager yields that value")
     func singleValue() {
         var averager = ProactiveAverager<Double>()
-        averager.average(7.0)
-        #expect(averager.currentAverage == 7.0)
-        #expect(averager.timesAveraged  == 1)
+        averager.average(7)
+        #expect(averager.currentAverage.isApproximately(7))
+        #expect(averager.timesAveraged == 1)
     }
     
-    /// Validates the weighting formula across a sequence of distinct values,
-    /// confirming the denominator advances correctly at each step.
+    
     @Test("Sequential single values converge to the correct mean")
     func sequentialValues() {
         var averager = ProactiveAverager<Double>()
         
-        averager.average(10.0)
-        averager.average(20.0)
-        #expect(abs(averager.currentAverage - 15.0) < ε)
+        averager.average(10)
+        averager.average(20)
+        // (10 + 20) / 2 = 15
+        #expect(averager.currentAverage.isApproximately(15))
         #expect(averager.timesAveraged == 2)
         
-        averager.average(30.0)
-        #expect(abs(averager.currentAverage - 20.0) < ε)
+        averager.average(30)
+        // (10 + 20 + 30) / 3 = 20
+        #expect(averager.currentAverage.isApproximately(20))
         #expect(averager.timesAveraged == 3)
     }
     
-    /// The array overload recomputes `currentAverage` in a single step using
-    /// the batch sum. Its result must match element-wise submission.
-    @Test("Array overload matches element-wise submission")
+    
+    // MARK: Array averaging
+    
+    @Test("Array averaging matches element-wise averaging")
     func arrayMatchesElementWise() {
         var batch     = ProactiveAverager<Double>()
         var stepwise  = ProactiveAverager<Double>()
         
-        batch.average([1.0, 2.0, 3.0, 4.0, 5.0])
-        for n in [1.0, 2.0, 3.0, 4.0, 5.0] { stepwise.average(n) }
+        batch.average([1, 2, 3, 4, 5])
+        stepwise.average(1)
+        stepwise.average(2)
+        stepwise.average(3)
+        stepwise.average(4)
+        stepwise.average(5)
         
-        #expect(abs(batch.currentAverage - stepwise.currentAverage) < ε)
+        #expect(batch.currentAverage.isApproximately(stepwise.currentAverage))
         #expect(batch.timesAveraged == stepwise.timesAveraged)
     }
     
+    
+    @Test("Empty array is a no-op")
+    func emptyArrayIsNoOp() {
+        var averager = ProactiveAverager<Double>()
+        averager.average(7)
+        let snapshotAverage  = averager.currentAverage
+        let snapshotCount    = averager.timesAveraged
+        
+        averager.average([Double]())
+        
+        #expect(averager.currentAverage.isApproximately(snapshotAverage))
+        #expect(averager.timesAveraged == snapshotCount)
+    }
+    
+    
+    // MARK: Variadic averaging
+    
+    @Test("Variadic `average` produces the correct result")
+    func variadicAveraging() {
+        var averager = ProactiveAverager<Double>()
+        averager.average(2, 4, 6)
+        // (2 + 4 + 6) / 3 = 4
+        #expect(averager.currentAverage.isApproximately(4))
+        #expect(averager.timesAveraged == 3)
+    }
+    
+    
     // MARK: Chaining
     
-    /// The fluent interface must accumulate correctly across mixed call forms.
     @Test("Chained calls produce the correct cumulative mean")
     func chaining() {
         var averager = ProactiveAverager<Double>()
-        averager.average(1.0, 2.0, 3.0)
-        averager.average([4.0, 5.0])
-        averager.average(6.0)
+        averager.average(1, 2, 3)
+        averager.average([4, 5])
+        averager.average(6)
         // (1 + 2 + 3 + 4 + 5 + 6) / 6 = 3.5
-        #expect(abs(averager.currentAverage - 3.5) < ε)
+        #expect(averager.currentAverage.isApproximately(3.5))
         #expect(averager.timesAveraged == 6)
     }
     
+    
     // MARK: Edge cases
     
-    /// Negative and mixed-sign inputs exercise the cancellation path of the
-    /// running-average formula.
     @Test("Mixed-sign values cancel correctly")
     func mixedSignValues() {
         var averager = ProactiveAverager<Double>()
-        averager.average([-5.0, 5.0])
-        #expect(abs(averager.currentAverage - 0.0) < ε)
+        averager.average([-5, 5])
+        #expect(averager.currentAverage.isApproximately(0))
     }
     
-    /// Confirms the generic constraint isn't inadvertently `Double`-specific.
-    @Test("Works correctly with Float type parameter")
+    
+    @Test("Works correctly with `Float` type parameter")
     func floatTypeParameter() {
         var averager = ProactiveAverager<Float>()
-        averager.average(1.0, 3.0)
-        #expect(abs(averager.currentAverage - 2.0) < Float(1e-6))
+        averager.average(1, 3)
+        #expect(averager.currentAverage.isApproximately(2))
     }
 }
 
@@ -265,174 +439,250 @@ struct ProactiveAveragerTests {
 
 // MARK: - SummingAverager
 
-/// Validates invariants unique to `SummingAverager`: its initialisation contract,
-/// the deferred-division `currentAverage` computation (including the mathematically
-/// correct NaN-when-empty behaviour), and its protocol conformances.
-///
-/// Protocol-synthesised behaviour is covered in `AveragerProtocolSynthesisTests`.
-@Suite("SummingAverager")
+@Suite("`SummingAverager`")
 struct SummingAveragerTests {
     
-    // MARK: Initialisation
     
-    /// A default-initialised `SummingAverager` must store a zero sum and a zero
-    /// count — the identity state from which any averaging sequence can begin.
-    @Test("Default init: zero sum, zero count")
+    // MARK: init
+    
+    @Test("`init()`: zero sum, zero count")
     func defaultInit() {
         let averager = SummingAverager<Double>()
-        #expect(averager.currentSum     == 0)
-        #expect(averager.timesAveraged  == 0)
+        #expect(averager.currentSum    == 0)
+        #expect(averager.timesAveraged == 0)
     }
     
-    /// `init(startingNumber:)` seeds `currentSum` with the given value so that
-    /// a subsequent query for `currentAverage` returns that value immediately.
-    @Test("startingNumber init: seeds sum and count correctly")
+    
+    @Test("`init(startingNumber:)`: seeds sum and count correctly")
     func startingNumberInit() {
         let averager = SummingAverager<Double>(startingNumber: 8)
-        #expect(averager.currentSum    == 8)
-        #expect(averager.timesAveraged == 1)
-        #expect(averager.currentAverage == 8)
+        #expect(averager.currentSum     == 8)
+        #expect(averager.timesAveraged  == 1)
+        #expect(averager.currentAverage.isApproximately(8))
     }
     
-    // MARK: currentAverage — deferred-division contract
     
-    /// Dividing zero contributions produces a mathematically undefined mean.
-    /// `SummingAverager` correctly returns NaN rather than an arbitrary sentinel,
-    /// consistent with IEEE 754 and the established literature on the arithmetic
-    /// mean of the empty set. Callers who need a defined result should prefer
-    /// `currentAverageOrNil`.
-    @Test("currentAverage is NaN when no values have been averaged")
+    // MARK: currentAverage
+    
+    /// With no values contributed, `currentAverage` is NaN. This is the mathematically correct result for the mean of the empty set. Use `currentAverageOrNil` if you need a defined value.
+    @Test("`currentAverage` is NaN when no values have been averaged")
     func currentAverageIsNaNWhenEmpty() {
         let averager = SummingAverager<Double>()
         #expect(averager.currentAverage.isNaN)
     }
     
-    /// Validates the deferred `sum / count` computation across a known sequence.
-    @Test("currentAverage reflects the correct mean after averaging")
+    
+    @Test("`currentAverage` reflects the correct mean after averaging")
     func currentAverageBasic() {
         var averager = SummingAverager<Double>()
-        averager.average([10.0, 20.0, 30.0])
-        // 60 / 3 = 20
-        #expect(abs(averager.currentAverage - 20.0) < ε)
+        averager.average([10, 20, 30])
+        // (10 + 20 + 30) / 3 = 20
+        #expect(averager.currentAverage.isApproximately(20))
     }
     
-    // MARK: Single-value path
     
-    /// The single-value overload must increment both `currentSum` and `timesAveraged`
-    /// atomically, leaving the averager in a consistent state.
+    // MARK: currentAverageOrNil
+    
+    @Test("`currentAverageOrNil` is nil before any averaging")
+    func currentAverageOrNilWhenEmpty() {
+        let averager = SummingAverager<Double>()
+        #expect(averager.currentAverageOrNil == nil)
+    }
+    
+    
+    @Test("`currentAverageOrNil` returns the mean after averaging")
+    func currentAverageOrNilWhenPopulated() {
+        var averager = SummingAverager<Double>()
+        averager.average(42)
+        #expect(averager.currentAverageOrNil?.isApproximately(42) == true)
+    }
+    
+    
+    @Test("`currentAverageOrNil` reverts to nil after `clear()`")
+    func currentAverageOrNilAfterClear() {
+        var averager = SummingAverager<Double>()
+        averager.average(5)
+        averager.clear()
+        #expect(averager.currentAverageOrNil == nil)
+    }
+    
+    
+    // MARK: clear()
+    
+    @Test("`clear()` resets to a blank state")
+    func clearResetsState() {
+        var averager = SummingAverager<Double>()
+        averager.average([10, 20, 30])
+        averager.clear()
+        
+        let fresh = SummingAverager<Double>()
+        #expect(averager == fresh)
+        #expect(averager.timesAveraged == 0)
+    }
+    
+    
+    @Test("Averaging works correctly after `clear()`")
+    func averagingAfterClear() {
+        var averager = SummingAverager<Double>()
+        averager.average([100, 200])
+        averager.clear()
+        averager.average([3, 9])
+        // (3 + 9) / 2 = 6
+        #expect(averager.currentAverage.isApproximately(6))
+        #expect(averager.timesAveraged == 2)
+    }
+    
+    
+    // MARK: Single-value averaging
+    
     @Test("Single-value average increments sum and count correctly")
     func singleValue() {
         var averager = SummingAverager<Double>()
-        averager.average(7.0)
-        #expect(averager.currentSum    == 7.0)
-        #expect(averager.timesAveraged == 1)
-        #expect(averager.currentAverage == 7.0)
+        averager.average(7)
+        #expect(averager.currentSum     == 7)
+        #expect(averager.timesAveraged  == 1)
+        #expect(averager.currentAverage.isApproximately(7))
     }
     
-    // MARK: Array overload — override correctness
     
-    /// `SummingAverager` overrides the protocol's `average(_ numbers: [Number])`
-    /// default to sum the batch in one pass rather than via `forEach`. This test
-    /// confirms the override is arithmetically equivalent to the element-wise path.
-    @Test("Array overload override is equivalent to element-wise submission")
-    func arrayOverrideMatchesElementWise() {
+    // MARK: Array averaging
+    
+    @Test("Array averaging matches element-wise averaging")
+    func arrayMatchesElementWise() {
         var batch     = SummingAverager<Double>()
         var stepwise  = SummingAverager<Double>()
         
-        batch.average([1.0, 2.0, 3.0, 4.0, 5.0])
-        for n in [1.0, 2.0, 3.0, 4.0, 5.0] { stepwise.average(n) }
+        batch.average([1, 2, 3, 4, 5])
+        stepwise.average(1)
+        stepwise.average(2)
+        stepwise.average(3)
+        stepwise.average(4)
+        stepwise.average(5)
         
         #expect(batch == stepwise)
     }
     
-    // MARK: Protocol conformances
     
-    /// Two averagers with identical sums and counts must compare equal, regardless
-    /// of insertion order — commutativity of addition guarantees this for the sum.
-    @Test("Equatable: same sum and count are equal")
+    @Test("Empty array is a no-op")
+    func emptyArrayIsNoOp() {
+        var averager = SummingAverager<Double>()
+        averager.average(7)
+        let snapshot = averager
+        
+        averager.average([Double]())
+        #expect(averager == snapshot)
+    }
+    
+    
+    // MARK: Variadic averaging
+    
+    @Test("Variadic `average` produces the correct result")
+    func variadicAveraging() {
+        var averager = SummingAverager<Double>()
+        averager.average(2, 4, 6)
+        // (2 + 4 + 6) / 3 = 4
+        #expect(averager.currentAverage.isApproximately(4))
+        #expect(averager.timesAveraged == 3)
+    }
+    
+    
+    // MARK: Chaining
+    
+    @Test("Chained calls accumulate correctly")
+    func chaining() {
+        var averager = SummingAverager<Double>()
+        averager.average([1, 2])
+        averager.average(3)
+        // (1 + 2 + 3) / 3 = 2
+        #expect(averager.currentAverage.isApproximately(2))
+        #expect(averager.timesAveraged == 3)
+    }
+    
+    
+    // MARK: Conformances
+    
+    /// Two averagers with the same sum and count must be equal, regardless of the order values were added.
+    @Test("`Equatable`: same sum and count are equal")
     func equatable() {
         var a = SummingAverager<Double>()
         var b = SummingAverager<Double>()
-        a.average([1.0, 2.0, 3.0])
-        b.average([3.0, 2.0, 1.0])
+        a.average([1, 2, 3])
+        b.average([3, 2, 1])
         #expect(a == b)
     }
     
-    /// Averagers with differing sums must not compare equal.
-    @Test("Equatable: different sums are not equal")
+    
+    @Test("`Equatable`: different sums are not equal")
     func notEqual() {
         var a = SummingAverager<Double>()
         var b = SummingAverager<Double>()
-        a.average(1.0)
-        b.average(2.0)
+        a.average(1)
+        b.average(2)
         #expect(a != b)
     }
     
-    /// Equal values must hash identically — the fundamental hash/equality contract.
-    @Test("Hashable: equal averagers produce the same hash")
+    
+    @Test("`Hashable`: equal averagers produce the same hash")
     func hashable() {
         var a = SummingAverager<Double>()
         var b = SummingAverager<Double>()
-        a.average(5.0)
-        b.average(5.0)
+        a.average(5)
+        b.average(5)
         #expect(a.hashValue == b.hashValue)
     }
     
-    /// Confirms `Hashable` works correctly in collection contexts by verifying
-    /// that a `Set` deduplicates two logically equal instances.
-    @Test("Hashable: Set correctly deduplicates equal averagers")
+    
+    @Test("`Hashable`: `Set` correctly deduplicates equal averagers")
     func hashableInSet() {
         var a = SummingAverager<Double>()
         var b = SummingAverager<Double>()
-        a.average(10.0)
-        b.average(10.0)
+        a.average(10)
+        b.average(10)
         let set: Set<SummingAverager<Double>> = [a, b]
         #expect(set.count == 1)
     }
     
-    /// `Comparable` is ordered by `currentAverage`, so an averager with a lower
-    /// mean must compare less-than one with a higher mean.
-    @Test("Comparable: lower average is less-than higher average")
+    
+    /// `Comparable` orders by `currentAverage`.
+    @Test("`Comparable`: lower average is less-than higher average")
     func comparable() {
         var low  = SummingAverager<Double>()
         var high = SummingAverager<Double>()
-        low.average(1.0)
-        high.average(100.0)
+        low.average(1)
+        high.average(100)
         #expect(low < high)
         #expect(!(high < low))
     }
     
-    /// A `Codable` round-trip through JSON must produce a value equal to the
-    /// original — the minimal soundness guarantee for persistence and transport.
-    @Test("Codable: encodes and decodes to an equal value")
+    
+    @Test("`Codable`: encodes and decodes to an equal value")
     func codable() throws {
         var original = SummingAverager<Double>()
-        original.average([1.0, 2.0, 3.0])
+        original.average([1, 2, 3])
         
         let data    = try JSONEncoder().encode(original)
         let decoded = try JSONDecoder().decode(SummingAverager<Double>.self, from: data)
         
         #expect(original == decoded)
-        #expect(abs(decoded.currentAverage - 2.0) < ε)
+        #expect(decoded.currentAverage.isApproximately(2))
     }
+    
     
     // MARK: Edge cases
     
-    /// Validates sign handling: positive and negative values of equal magnitude
-    /// must cancel to a zero mean.
     @Test("Mixed-sign values cancel correctly")
     func mixedSignValues() {
         var averager = SummingAverager<Double>()
-        averager.average([-3.0, -1.0, 1.0, 3.0])
-        #expect(abs(averager.currentAverage - 0.0) < ε)
+        averager.average([-3, -1, 1, 3])
+        #expect(averager.currentAverage.isApproximately(0))
     }
     
-    /// Confirms the generic constraint isn't inadvertently `Double`-specific.
-    @Test("Works correctly with Float type parameter")
+    
+    @Test("Works correctly with `Float` type parameter")
     func floatTypeParameter() {
         var averager = SummingAverager<Float>()
-        averager.average([2.0, 4.0])
-        #expect(abs(averager.currentAverage - 3.0) < Float(1e-6))
+        averager.average([2, 4])
+        #expect(averager.currentAverage.isApproximately(3))
     }
 }
 
@@ -440,45 +690,40 @@ struct SummingAveragerTests {
 
 // MARK: - << Operator
 
-/// Validates the `<<` infix operator, which provides a concise mutation syntax
-/// for averaging a single value into a conforming averager.
-@Suite("<< Operator")
+@Suite("`<<` Operator")
 struct OperatorTests {
     
-    /// A single `<<` application must produce the same state as calling
-    /// `average(_ number:)` directly with the same value.
-    @Test("<< is equivalent to average(_:Number) for a single value")
+    @Test("`<<` is equivalent to `average(_:)` for a single value")
     func operatorEquivalentToAverageCall() {
-        var operatorAverager = SummingAverager<Double>()
-        var methodAverager   = SummingAverager<Double>()
+        var a = SummingAverager<Double>()
+        var b = SummingAverager<Double>()
         
-        operatorAverager << 42.0
-        methodAverager.average(42.0)
+        a << 42
+        b.average(42)
         
-        #expect(operatorAverager == methodAverager)
+        #expect(a == b)
     }
     
-    /// Multiple sequential `<<` applications must accumulate identically to
-    /// multiple `average(_:Number)` calls.
-    @Test("<< accumulates correctly across multiple applications")
+    
+    @Test("`<<` accumulates correctly across multiple applications")
     func operatorAccumulates() {
         var averager = SummingAverager<Double>()
-        averager << 10.0
-        averager << 20.0
-        averager << 30.0
+        averager << 10
+        averager << 20
+        averager << 30
         // (10 + 20 + 30) / 3 = 20
-        #expect(abs(averager.currentAverage - 20.0) < ε)
+        #expect(averager.currentAverage.isApproximately(20))
         #expect(averager.timesAveraged == 3)
     }
     
-    /// Confirms the operator works with `ProactiveAverager`, exercising the
-    /// generic constraint `Averager: AveragerProtocol`.
-    @Test("<< works correctly with ProactiveAverager")
+    
+    @Test("`<<` works correctly with `ProactiveAverager`")
     func operatorWithProactiveAverager() {
         var averager = ProactiveAverager<Double>()
-        averager << 4.0
-        averager << 8.0
-        #expect(abs(averager.currentAverage - 6.0) < ε)
+        averager << 4
+        averager << 8
+        // (4 + 8) / 2 = 6
+        #expect(averager.currentAverage.isApproximately(6))
     }
 }
 
@@ -486,75 +731,84 @@ struct OperatorTests {
 
 // MARK: - Cross-Implementation Consistency
 
-/// Validates that `ProactiveAverager` and `SummingAverager` agree on the
-/// arithmetic mean for identical inputs. This is the highest-value suite in
-/// the file: it enforces the `AveragerProtocol` contract at the semantic level
-/// — that the averaging *strategy* is an implementation detail, not an
-/// observable difference.
+/// Verifies that all three averager types agree on the arithmetic mean for identical inputs. The choice of type should be an invisible implementation detail to callers.
 @Suite("Cross-Implementation Consistency")
 struct CrossImplementationTests {
     
-    /// Both strategies must produce the same mean for a simple known sequence.
-    @Test("Both averagers agree on the mean for a basic input set")
+    @Test("All three averagers agree on the mean for a basic input set")
     func agreementOnBasicInputs() {
-        let values = [1.0, 2.0, 3.0, 7.0, 11.0, 42.0]
+        let values: [Double] = [1, 2, 3, 7, 11, 42]
         
-        var proactive = ProactiveAverager<Double>()
-        var summing   = SummingAverager<Double>()
+        var proactive  = ProactiveAverager<Double>()
+        var summing    = SummingAverager<Double>()
+        var reference  = ReferenceAverager<Double>()
         
         proactive.average(values)
         summing.average(values)
+        reference.average(values)
         
-        #expect(abs(proactive.currentAverage - summing.currentAverage) < ε)
+        #expect(proactive.currentAverage.isApproximately(reference.currentAverage))
+        #expect(summing.currentAverage.isApproximately(reference.currentAverage))
     }
     
-    /// Incrementally contributed values exercise both strategies over a larger
-    /// range, confirming convergence on the expected mean of 1…100.
-    @Test("Both averagers converge to the same mean over 100 incremental values")
+    
+    @Test("All three averagers converge to the same mean over 100 incremental values")
     func agreementOverLargeIncremental() {
-        var proactive = ProactiveAverager<Double>()
-        var summing   = SummingAverager<Double>()
+        var proactive  = ProactiveAverager<Double>()
+        var summing    = SummingAverager<Double>()
+        var reference  = ReferenceAverager<Double>()
         
-        for value in stride(from: 1.0, through: 100.0, by: 1.0) {
+        for value: Double in stride(from: 1, through: 100, by: 1) {
             proactive.average(value)
             summing.average(value)
+            reference.average(value)
         }
         
-        // Sum of 1…100 = 5050, mean = 50.5
-        #expect(abs(proactive.currentAverage - 50.5) < ε)
-        #expect(abs(summing.currentAverage   - 50.5) < ε)
-        #expect(abs(proactive.currentAverage - summing.currentAverage) < ε)
+        // Sum of 1...100 = 5050, mean = 50.5
+        #expect(proactive.currentAverage.isApproximately(50.5))
+        #expect(summing.currentAverage.isApproximately(50.5))
+        #expect(reference.currentAverage.isApproximately(50.5))
     }
     
-    /// Both strategies must count contributions identically.
-    @Test("Both averagers agree on timesAveraged")
+    
+    @Test("All three averagers agree on `timesAveraged`")
     func agreementOnCount() {
-        let values = [10.0, 20.0, 30.0]
+        let values: [Double] = [10, 20, 30]
         
-        var proactive = ProactiveAverager<Double>()
-        var summing   = SummingAverager<Double>()
+        var proactive  = ProactiveAverager<Double>()
+        var summing    = SummingAverager<Double>()
+        var reference  = ReferenceAverager<Double>()
         
         proactive.average(values)
         summing.average(values)
+        reference.average(values)
         
-        #expect(proactive.timesAveraged == summing.timesAveraged)
+        #expect(proactive.timesAveraged == reference.timesAveraged)
+        #expect(summing.timesAveraged   == reference.timesAveraged)
     }
     
-    /// Mixed-call-form submission — single values, arrays, and variadic — must
-    /// produce the same mean across both strategies.
-    @Test("Both averagers agree across mixed call forms")
+    
+    @Test("All three averagers agree across mixed call forms")
     func agreementAcrossMixedCallForms() {
-        var proactive = ProactiveAverager<Double>()
-        var summing   = SummingAverager<Double>()
+        var proactive  = ProactiveAverager<Double>()
+        var summing    = SummingAverager<Double>()
+        var reference  = ReferenceAverager<Double>()
         
-        proactive.average(1.0)
-        summing  .average(1.0)
-        proactive.average([2.0, 3.0])
-        summing  .average([2.0, 3.0])
-        proactive.average(4.0, 5.0)
-        summing  .average(4.0, 5.0)
+        proactive.average(1)
+        summing  .average(1)
+        reference.average(1)
         
-        #expect(abs(proactive.currentAverage - summing.currentAverage) < ε)
-        #expect(proactive.timesAveraged == summing.timesAveraged)
+        proactive.average([2, 3])
+        summing  .average([2, 3])
+        reference.average([2, 3])
+        
+        proactive.average(4, 5)
+        summing  .average(4, 5)
+        reference.average(4, 5)
+        
+        #expect(proactive.currentAverage.isApproximately(reference.currentAverage))
+        #expect(summing.currentAverage.isApproximately(reference.currentAverage))
+        #expect(proactive.timesAveraged == reference.timesAveraged)
+        #expect(summing.timesAveraged   == reference.timesAveraged)
     }
 }

@@ -18,7 +18,9 @@ public protocol AveragerProtocol {
     /// Remembers the number of times we've averaged this, to ensure proportional division.
     var timesAveraged: UInt { get }
     
-    /// The current mean of all averaged numbers
+    /// The current mean of all averaged numbers.
+    ///
+    /// The value of this when you haven't yet averaged any numbers is undefined, and different implementations can choose to return whatever makes sense to them in that case.
     var currentAverage: Number { get }
     
     /// If any numbers have been averaged, this returns the current average. Else, if no numbers have yet been averaged, this returns `nil`
