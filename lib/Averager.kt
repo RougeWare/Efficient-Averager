@@ -11,7 +11,7 @@ import java.util.*
  * is that you sacrifice speed, but rigorous testing of this speed loss has not yet been performed.
  *
  * @license BH-0-PD to Blue Husky Programming, ©2017
- * @author Kyli Rouge of Blue Husky Studios
+ * @author Ky
  * @since 2017-01-08
  * @version 1.0.0
  */
@@ -50,7 +50,7 @@ class Averager : Number {
      *
      * @return a copy of this, so calls can be chained. For example: `averager.average(arrayOfNumbers).average(123, 654);`
      *
-     * @author Kyli Rouge
+     * @author Ky
      * @since 2017-01-08
      * @version 1.0.0
      */
@@ -67,7 +67,7 @@ class Averager : Number {
      *
      * @return a copy of this, so calls can be chained. For example: `averager.average(myNumber).average(123);`
      *
-     * @author Kyli Rouge
+     * @author Ky
      * @since 2017-01-08
      * @version 1.0.0
      */
@@ -81,7 +81,7 @@ class Averager : Number {
      *
      * @return the current average, as a floating-point number
      *
-     * @author Kyli Rouge
+     * @author Ky
      * @since 2017-01-08
      * @version 1.0.0
      */
@@ -94,7 +94,7 @@ class Averager : Number {
      *
      * @return the number of times this has been averaged, as an integer
      *
-     * @author Kyli Rouge
+     * @author Ky
      * @since 2017-01-08
      * @version 1.0.0
      */
@@ -107,7 +107,7 @@ class Averager : Number {
      *
      * @return the number of times this has been averaged, as an integer
      *
-     * @author Kyli Rouge
+     * @author Ky
      * @since 2017-01-08
      * @version 1.0.0
      */
@@ -121,7 +121,7 @@ class Averager : Number {
      * @return the value of the current average, as an 8-bit integer.
      *
      * @see toDouble
-     * @author Kyli Rouge
+     * @author Ky
      * @since 2017-01-08
      * @version 1.0.0
      */
@@ -134,7 +134,7 @@ class Averager : Number {
      * @return the value of the current average, as a 16-bit integer.
      *
      * @see toDouble
-     * @author Kyli Rouge
+     * @author Ky
      * @since 2017-01-08
      * @version 1.0.0
      */
@@ -147,7 +147,7 @@ class Averager : Number {
      * @return the value of the current average, as a 16-bit character.
      *
      * @see toDouble
-     * @author Kyli Rouge
+     * @author Ky
      * @since 2017-01-08
      * @version 1.0.0
      */
@@ -160,7 +160,7 @@ class Averager : Number {
      * @return the value of the current average, as a 32-bit integer.
      *
      * @see toDouble
-     * @author Kyli Rouge
+     * @author Ky
      * @since 2017-01-08
      * @version 1.0.0
      */
@@ -173,7 +173,7 @@ class Averager : Number {
      * @return the value of the current average, as a 64-bit integer.
      *
      * @see toDouble
-     * @author Kyli Rouge
+     * @author Ky
      * @since 2017-01-08
      * @version 1.0.0
      */
@@ -186,7 +186,7 @@ class Averager : Number {
      * @return the value of the current average, as a 32-bit floating-point number.
      *
      * @see toDouble
-     * @author Kyli Rouge
+     * @author Ky
      * @since 2017-01-08
      * @version 1.0.0
      */
@@ -198,7 +198,7 @@ class Averager : Number {
     /**
      * @return the value of the current average, as a 64-bit floating-point number.
      *
-     * @author Kyli Rouge
+     * @author Ky
      * @since 2017-01-08
      * @version 1.0.0
      */

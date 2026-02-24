@@ -14,21 +14,21 @@ final class Testbench: XCTestCase {
         XCTAssertEqual(   8.05 , a.currentAverage, accuracy: 0.001)
         
         var b = Averager<Double>()
-        XCTAssertEqual(b.currentAverage, 0)
+        XCTAssert(b.currentAverage.isNaN)
         XCTAssertEqual(b.timesAveraged, 0)
         XCTAssertNil(b.currentAverageOrNil)
-        XCTAssertEqual(    0.0 , b.currentAverage)
         b.average(13)
         XCTAssertEqual(   13.0 , b.currentAverage)
         b.average(55, 712.197, 18, 99)
         XCTAssertEqual(179.439 , b.currentAverage, accuracy: 0.001)
         
         var c = Averager<Double>()
-        XCTAssertEqual(c.currentAverage, 0)
+        XCTAssert(c.currentAverage.isNaN)
         XCTAssertEqual(c.timesAveraged, 0)
         XCTAssertNil(c.currentAverageOrNil)
         c.average(-2147483648, 2147483647, 2147483647, -2147483648)
         XCTAssertEqual(   -0.5 , c.currentAverage)
+        
         
         XCTAssertEqual(      6 , a.timesAveraged)
         XCTAssertEqual(      5 , b.timesAveraged)
@@ -36,9 +36,19 @@ final class Testbench: XCTestCase {
         
         
         c.clear()
-        XCTAssertEqual(c.currentAverage, 0)
+        XCTAssert(c.currentAverage.isNaN)
         XCTAssertEqual(c.timesAveraged, 0)
         XCTAssertNil(c.currentAverageOrNil)
+    }
+    
+    
+    func testIdentity() {
+        var i = Averager<Double>()
+        XCTAssert(i.currentAverage.isNaN)
+        XCTAssertEqual(i.timesAveraged, 0)
+        XCTAssertNil(i.currentAverageOrNil)
+        i.average(1,1,1,1)
+        XCTAssertEqual(1 , i.currentAverage)
     }
 
     static let allTests = [
