@@ -125,15 +125,3 @@ public extension ProactiveAverager {
         return self
     }
 }
-
-
-
-public extension ProactiveAverager {
-    
-    /// If any numbers have been averaged, this returns the current average. Else, if no numbers have yet been averaged, this returns `nil`
-    var currentAverageOrNil: Number? {
-        timesAveraged > 0
-            ? currentAverage
-            : nil
-    }
-}
