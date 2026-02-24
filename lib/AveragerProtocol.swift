@@ -9,6 +9,7 @@ import Foundation
 
 
 
+/// Finds the arithmetic mean (the average) of arbitrarily many numbers
 public protocol AveragerProtocol {
     associatedtype Number: BinaryFloatingPoint
     
@@ -102,6 +103,14 @@ public extension AveragerProtocol {
     @discardableResult
     mutating func average(_ numbers: [Number]) -> Self {
         numbers.forEach { average($0) }
+        return self
+    }
+    
+    
+    @available(*, deprecated, message: "Please provide numbers to average.")
+    @inline(__always)
+    @discardableResult
+    mutating func average() -> Self {
         return self
     }
     
