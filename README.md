@@ -1,4 +1,12 @@
 Efficient Averager
 ==================
 
-Uses exactly two floating-point variables to average indefinitely many numbers with a constant amount of memory usage.
+Zero-dependency micro-library for averaging arbitrarily many numbers while using a constant amount of memory.
+
+Supported languages:
+
+- Swift (+ Swift Package Manger)
+- JavaScript (+ Node Package Manager)
+- Java
+- Kotlin
+- PHP
