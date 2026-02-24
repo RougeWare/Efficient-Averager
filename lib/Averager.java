@@ -1,15 +1,15 @@
-﻿/**
+/**
  * Averages very many numbers while using only 128 bits of memory (one floating-point and one integer), to store the average
  * information. This also allows for a more accurate result than adding all and dividing by the number of inputs. The downside
  * is that you sacrifice speed, but rigorous testing of this speed loss has not yet been performed.
  * 
  * @license MIT to Blue Husky Programming, ©2012
- * @author Kyli Rouge of Blue Husky Studios
+ * @author Ky
  * @since 2012-04-06
  * @version 1.1.0
- * 		- 2014-08-25 (1.1.0) - Kyli Rouge renamed methods to be more uniform with other languages
- * 		- 2014-08-13 (1.0.1) - Kyli Rouge reformatted and documented the code for GitHub
- * 		- 2012-04-06 (1.0.0) - Kyli Rouge made base code
+ * 		- 2014-08-25 (1.1.0) - Ky renamed methods to be more uniform with other languages
+ * 		- 2014-08-13 (1.0.1) - Ky reformatted and documented the code for GitHub
+ * 		- 2012-04-06 (1.0.0) - Ky made base code
  */
 
 public class Averager extends Number
@@ -48,7 +48,7 @@ public class Averager extends Number
 	 * @param d one or more numbers to average.
 	 * @return a copy of this, so calls can be chained. For example: avgr.average(arrayOfNumbers).average(123, 654);
 	 * 
-	 * @author Kyli Rouge
+	 * @author Ky
 	 * @since 2012-04-06
 	 * @version 1.0.0
 	 */
@@ -65,7 +65,7 @@ public class Averager extends Number
 	 * @param d one number to average.
 	 * @return a copy of this, so calls can be chained. For example: avgr.average(myNumber).average(123);
 	 * 
-	 * @author Kyli Rouge
+	 * @author Ky
 	 * @since 2012-04-06
 	 * @version 1.0.0
 	 */
@@ -81,7 +81,7 @@ public class Averager extends Number
 	 * 
 	 * @return the current average, as a floating-point number
 	 * 
-	 * @author Kyli Rouge
+	 * @author Ky
 	 * @since 2012-04-06
 	 * @version 1.0.0
 	 */
@@ -95,7 +95,7 @@ public class Averager extends Number
 	 * 
 	 * @return the number of times this has been averaged, as an integer
 	 * 
-	 * @author Kyli Rouge
+	 * @author Ky
 	 * @since 2012-04-06
 	 * @version 1.0.0
 	 */
@@ -109,7 +109,7 @@ public class Averager extends Number
 	 * 
 	 * @return the number of times this has been averaged, as an integer
 	 * 
-	 * @author Kyli Rouge
+	 * @author Ky
 	 * @since 2012-04-06
 	 * @version 1.0.0
 	 */
@@ -129,7 +129,7 @@ public class Averager extends Number
 	 * 
 	 * @see #doubleValue()
 	 * 
-	 * @author Kyli Rouge
+	 * @author Ky
 	 * @since 2012-04-06
 	 * @version 1.0.0
 	 */
@@ -148,7 +148,7 @@ public class Averager extends Number
 	 * 
 	 * @see #doubleValue()
 	 * 
-	 * @author Kyli Rouge
+	 * @author Ky
 	 * @since 2012-04-06
 	 * @version 1.0.0
 	 */
@@ -167,7 +167,7 @@ public class Averager extends Number
 	 * 
 	 * @see #doubleValue()
 	 * 
-	 * @author Kyli Rouge
+	 * @author Ky
 	 * @since 2012-04-06
 	 * @version 1.0.0
 	 */
@@ -182,7 +182,7 @@ public class Averager extends Number
 	 * 
 	 * @return the value of the current average, as a 64-bit floating-point number.
 	 * 
-	 * @author Kyli Rouge
+	 * @author Ky
 	 * @since 2012-04-06
 	 * @version 1.0.0
 	 */

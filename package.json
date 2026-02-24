@@ -5,12 +5,16 @@
 	"main": "lib/eff-avg.min.js",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/BlueHuskyStudios/Efficient-Averager"
+		"url": "https://github.com/RougeWare/Efficient-Averager"
 	},
-	"author": "Kyli Rouge <Kyli@BHStudios.org>",
+	"author": "Ky <Ky@KyNorthstar.me>",
 	"maintainers": [
+        {
+            "name": "Ky",
+            "url": "https://github.com/KyNorthstar"
+        },
 		{
-			"name": "Kyli Rouge",
+			"name": "The Northstar System",
 			"url": "https://github.com/Supuhstar"
 		}
 	],
