@@ -1,5 +1,5 @@
 //
-//  Averager.swift
+//  RecreationalAverager.swift
 //  Efficient Averager
 //
 //  Created by Ben Leggiero on 2019-03-31.
@@ -11,7 +11,7 @@ import Foundation
 
 
 
-/// Averager is made by Blue Husky Studios, under the BH-0-PD license.
+/// RecreationalAverager is made by Blue Husky Studios, under the BH-0-PD license.
 /// https://github.com/BlueHuskyStudios/Licenses/blob/master/Licenses/BH-0-PD.txt
 ///
 /// Averages very many numbers while using only 128 bits of memory (one floating-point and one integer), to store the
@@ -22,7 +22,7 @@ import Foundation
 /// @author Ben Leggiero
 /// @since 2019-03-31
 /// @version 1.1.0
-public struct Averager<Number: BinaryFloatingPoint> {
+public struct RecreationalAverager<Number: BinaryFloatingPoint> {
     
     ///  Holds the current average value
     public private(set) var currentAverage: Number = 0
@@ -30,14 +30,14 @@ public struct Averager<Number: BinaryFloatingPoint> {
     /// Remembers the number of times we've averaged this, to ensure proportional division.
     public private(set) var timesAveraged: UInt = 0
     
-    /// Creates a new `Averager`. Of course, the current average and number of times averaged are both set to `0`
+    /// Creates a new `RecreationalAverager`. Of course, the current average and number of times averaged are both set to `0`
     public init() {
         currentAverage = 0
         timesAveraged = 0
     }
     
     
-    /// Creates a new `Averager`. The current average is set to the given number and number of times averaged is set to `1`
+    /// Creates a new `RecreationalAverager`. The current average is set to the given number and number of times averaged is set to `1`
     ///
     /// - Parameter startingNumber: the number to start with
     public init(startingNumber: Number) {
@@ -50,7 +50,7 @@ public struct Averager<Number: BinaryFloatingPoint> {
 
 // MARK: - Functionality
 
-public extension Averager {
+public extension RecreationalAverager {
     
     /// Adds the given numbers to the average. Any number of arguments can be given.
     ///
@@ -68,7 +68,7 @@ public extension Averager {
     /// - Version: 1.0.0
     ///
     @discardableResult
-    mutating func average(_ numbers: Number...) -> Averager<Number> {
+    mutating func average(_ numbers: Number...) -> RecreationalAverager<Number> {
         return average(numbers)
     }
     
@@ -88,7 +88,7 @@ public extension Averager {
     /// - Since: 2019-03-31
     /// - Version: 1.0.0
     @discardableResult
-    mutating func average(_ numbers: [Number]) -> Averager<Number> {
+    mutating func average(_ numbers: [Number]) -> RecreationalAverager<Number> {
         numbers.forEach { average($0) }
         return self
     }
@@ -109,7 +109,7 @@ public extension Averager {
     /// - Since: 2019-03-31
     /// - Version: 1.0.0
     @discardableResult
-    mutating func average(_ number: Number) -> Averager<Number> {
+    mutating func average(_ number: Number) -> RecreationalAverager<Number> {
         currentAverage = ((currentAverage * Number(timesAveraged)) + number) / Number(timesAveraged + 1)
         timesAveraged += 1
         return self
@@ -118,7 +118,7 @@ public extension Averager {
     
     /// Resets this averager to a state before any number has been averaged
     @discardableResult
-    mutating func clear() -> Averager<Number> {
+    mutating func clear() -> RecreationalAverager<Number> {
         currentAverage = 0.0
         timesAveraged = 0
         return self
@@ -127,7 +127,7 @@ public extension Averager {
 
 
 
-public extension Averager {
+public extension RecreationalAverager {
     
     /// If any numbers have been averaged, this returns the current average. Else, if no numbers have yet been averaged, this returns `nil`
     var currentAverageOrNil: Number? {
@@ -135,15 +135,4 @@ public extension Averager {
             ? currentAverage
             : nil
     }
-}
-
-
-
-/// Mutates the averager on the left-hand side so that the number on the right-hand side is averaged into it
-///
-/// - Parameters:
-///   - lhs: The averager to mutate
-///   - rhs: The number to add to the average
-public func << <Number>(lhs: inout Averager<Number>, rhs: Number) {
-    lhs.average(rhs)
 }

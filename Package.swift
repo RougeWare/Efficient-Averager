@@ -32,7 +32,11 @@ let package = Package(
                 "Averager.kt",
                 "testbench.js"
             ],
-            sources: ["Averager.swift"]),
+            sources: [
+                "AveragerProtocol.swift",
+                "RecreationalAverager.swift",
+                "SummingAverager.swift",
+            ]),
         .testTarget(
             name: "EfficientAveragerTests",
             dependencies: ["EfficientAverager"]),
