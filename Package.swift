@@ -34,7 +34,7 @@ let package = Package(
             ],
             sources: [
                 "AveragerProtocol.swift",
-                "RecreationalAverager.swift",
+                "ProactiveAverager.swift",
                 "SummingAverager.swift",
             ]),
         .testTarget(

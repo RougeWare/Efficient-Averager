@@ -16,8 +16,10 @@ public typealias Averager = SummingAverager
 
 
 
-/// Computes the arithmetic mean of arbitrarily many numbers while using only two fields of memory (one floating-point fields and one integer), to store the average over time. This also allows for encapsulated, resumable averaging operations.
+/// Computes the arithmetic mean of arbitrarily many numbers while using only two fields of memory (one floating-point field and one integer), to store the average over time. This also allows for encapsulated, resumable averaging operations.
 /// The downside is the same as summing an array of numbers: If the sum gets too big, it may become unusably inaccurate or overflow.
+///
+/// Technically, this differs from ``ProactiveAverager`` because this stores the sum and the number of times averaged, and divides those to calculate the average when you call ``currentAverage``.
 ///
 /// `SummingAverager` is made by Ky, in the public domain.
 /// https://opensource.org/license/fair
@@ -56,7 +58,18 @@ public extension SummingAverager {
     
     
     @discardableResult
-    mutating func average(_ number: Number) -> SummingAverager<Number> {
+    mutating func average(_ numbers: [Number]) -> Self {
+        guard !numbers.isEmpty else { return self }
+        let sumOfNewNumbers = numbers.reduce(into: 0, +=)
+        
+        currentSum += sumOfNewNumbers
+        timesAveraged += .init(numbers.count)
+        return self
+    }
+    
+    
+    @discardableResult
+    mutating func average(_ number: Number) -> Self {
         currentSum += number
         timesAveraged += 1
         return self
